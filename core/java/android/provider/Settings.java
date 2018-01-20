@@ -11906,6 +11906,12 @@ public final class Settings {
          */
         @Readable
         public static final String HIDE_DEVELOPER_STATUS = "hide_developer_status";
+        
+        /**
+         * Whether to include options in power menu for rebooting into recovery or bootloader
+         * @hide
+         */
+        public static final String ADVANCED_REBOOT = "advanced_reboot";
 
         /**
          * Keys we no longer back up under the current schema, but want to continue to
