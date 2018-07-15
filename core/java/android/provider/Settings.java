@@ -5208,6 +5208,18 @@ public final class Settings {
         public static final String STATUS_BAR_SHOW_BATTERY_PERCENT = "status_bar_battery_percent";
 
         /**
+         * Whether to show the clock in the right or left position or show it in the
+         * center
+         * 0: show the clock in the left position (LTR)
+         * 1: show the clock in the center
+         * 2: show the clock in the right position (LTR)
+         * default: 0
+         *
+         * @hide
+         */
+        public static final String STATUS_BAR_CLOCK = "status_bar_clock";
+
+        /**
          * Control whether to enable adaptive sleep mode.
          * @deprecated Use {@link android.provider.Settings.Secure#ADAPTIVE_SLEEP} instead.
          * @hide
