@@ -6295,6 +6295,16 @@ public final class Settings {
         public static final String CHARGING_CONTROL_LIMIT = "charging_control_charging_limit";
 
         /**
+         * Setting to enable / disable the navigation bar hint.
+         * <ul>
+         *    <li> 0 = Off
+         *    <li> 1 = On
+         * </ul>
+         * @hide
+         */
+        public static final String NAVIGATION_BAR_HINT = "navigation_bar_hint";
+
+        /**
          * Setting to enable camera flash notification feature.
          * <ul>
          *     <li> 0 = Off
