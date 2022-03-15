@@ -2373,6 +2373,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mContext.registerReceiver(mMultiuserReceiver, filter);
 
         mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+        
+        // register power menu broadcast
+        filter = new IntentFilter("android.intent.action.POWER_MENU");
+        mContext.registerReceiver(new BroadcastReceiver(){
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				showGlobalActionsInternal();
+			}
+		}, filter);
+
         mSafeModeEnabledVibePattern = getLongIntArray(mContext.getResources(),
                 com.android.internal.R.array.config_safeModeEnabledVibePattern);
 
