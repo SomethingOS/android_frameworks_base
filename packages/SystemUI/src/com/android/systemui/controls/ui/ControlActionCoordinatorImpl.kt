@@ -39,6 +39,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.flags.Flags.ONE_WAY_HAPTICS_API_MIGRATION
+import com.android.systemui.globalactions.GlobalActionsComponent
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.statusbar.policy.KeyguardStateController
@@ -60,6 +61,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
         private val vibrator: VibratorHelper,
         private val controlsSettingsRepository: ControlsSettingsRepository,
         private val featureFlags: FeatureFlags,
+        private val globalActionsComponent: GlobalActionsComponent,
 ) : ControlActionCoordinator {
     private var dialog: Dialog? = null
     private var pendingAction: Action? = null
@@ -68,7 +70,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
         get() = !keyguardStateController.isUnlocked()
     private val allowTrivialControls: Boolean
         get() = controlsSettingsRepository.allowActionOnTrivialControlsInLockscreen.value
-    override lateinit var activityContext: Context
+    override var activityContext: Context? = null
 
     companion object {
         private const val RESPONSE_TIMEOUT_IN_MILLIS = 3000L
@@ -196,7 +198,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
         val authRequired = action.authIsRequired || !allowTrivialControls
 
         if (keyguardStateController.isShowing() && authRequired) {
-            if (isLocked) {
+            if (activityContext == null) {
                 broadcastSender.closeSystemDialogs()
 
                 // pending actions will only run after the control state has been refreshed
@@ -204,7 +206,11 @@ class ControlActionCoordinatorImpl @Inject constructor(
             }
             activityStarter.dismissKeyguardThenExecute({
                 Log.d(ControlsUiController.TAG, "Device unlocked, invoking controls action")
-                action.invoke()
+                if (activityContext == null) {
+                    globalActionsComponent.handleShowGlobalActionsMenu()
+                } else {
+                    action.invoke()
+                }
                 true
             }, { pendingAction = null }, true /* afterKeyguardGone */)
         } else {
@@ -226,9 +232,21 @@ class ControlActionCoordinatorImpl @Inject constructor(
             uiExecutor.execute {
                 // make sure the intent is valid before attempting to open the dialog
                 if (activities.isNotEmpty() && taskViewFactory.isPresent) {
+                    if (activityContext == null) { // activityContext == null means we are in global actions
+                        broadcastSender.closeSystemDialogs()
+                        if (keyguardStateController.isShowing()) {
+                            activityStarter.dismissKeyguardThenExecute({
+                                pendingIntent.send()
+                                true
+                            }, {}, true /* afterKeyguardGone */)
+                        } else {
+                            pendingIntent.send()
+                        }
+                        return@execute
+                    }
                     taskViewFactory.get().create(context, uiExecutor, {
                         dialog = DetailDialog(
-                            activityContext, broadcastSender,
+                            activityContext!!, broadcastSender,
                             it, pendingIntent, cvh, keyguardStateController, activityStarter
                         ).also {
                             it.setOnDismissListener { _ -> dialog = null }
