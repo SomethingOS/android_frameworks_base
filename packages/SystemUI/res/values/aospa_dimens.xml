@@ -24,5 +24,8 @@
 
     <!-- HD calling icon -->
     <dimen name="signal_icon_viewport_size">24dp</dimen>
+    
+    <!-- Bluetooth dialog -->
+    <dimen name="bluetooth_dialog_active_device_bottom_margin">4dp</dimen>
 
 </resources>
