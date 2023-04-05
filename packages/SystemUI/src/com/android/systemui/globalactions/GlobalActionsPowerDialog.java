@@ -40,9 +40,15 @@ public class GlobalActionsPowerDialog {
     /**
      * Create a dialog for displaying Shut Down and Restart actions.
      */
+<<<<<<< HEAD
     public static Dialog create(@NonNull Context context, MultiListAdapter adapter) {
         final ViewGroup view = (ViewGroup) LayoutInflater.from(context).inflate(
                 R.layout.global_actions_grid_lite, null);
+=======
+    public static Dialog create(@NonNull Context context, ListAdapter adapter, boolean forceDark) {
+        ViewGroup listView = (ViewGroup) LayoutInflater.from(context).inflate(
+                com.android.systemui.res.R.layout.global_actions_power_dialog_flow, null);
+>>>>>>> fa3d403840df (Power menu styles: Initial checkin for U [1/3])
 
         final MultiListLayout multiListLayout = view.findViewById(R.id.global_actions_view);
         multiListLayout.setAdapter(adapter);
@@ -89,7 +95,36 @@ public class GlobalActionsPowerDialog {
         );
 
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+<<<<<<< HEAD
         dialog.setContentView(view);
+=======
+        dialog.setContentView(listView);
+
+        BlurUtils blurUtils = new BlurUtils(context.getResources(),
+                CrossWindowBlurListeners.getInstance(), new DumpManager());
+
+        Window window = dialog.getWindow();
+        window.setType(WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY);
+        window.setTitle(""); // prevent Talkback from speaking first item name twice
+        window.setBackgroundDrawable(res.getDrawable(
+                forceDark ? com.android.systemui.res.R.drawable.global_actions_background
+                        : com.android.systemui.res.R.drawable.global_actions_lite_background,
+                context.getTheme()));
+        window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+        if (blurUtils.supportsBlursOnWindows()) {
+            // Enable blur behind
+            // Enable dim behind since we are setting some amount dim for the blur.
+            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                    | WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            // Set blur behind radius
+            int blurBehindRadius = context.getResources()
+                    .getDimensionPixelSize(com.android.systemui.res.R.dimen.max_window_blur_radius);
+            window.getAttributes().setBlurBehindRadius(blurBehindRadius);
+            // Set dim only when blur is enabled.
+            window.setDimAmount(0.54f);
+        }
+
+>>>>>>> fa3d403840df (Power menu styles: Initial checkin for U [1/3])
         return dialog;
     }
 }

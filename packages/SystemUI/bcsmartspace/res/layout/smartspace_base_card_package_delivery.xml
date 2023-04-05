@@ -19,7 +19,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+<<<<<<< HEAD:packages/SystemUI/bcsmartspace/res/layout/smartspace_base_card_package_delivery.xml
     android:baselineAligned="false">
+=======
+    android:gravity="center"
+    android:background="@android:color/transparent"
+    android:padding="@dimen/global_actions_lite_padding"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+>>>>>>> fa3d403840df (Power menu styles: Initial checkin for U [1/3]):packages/SystemUI/res/layout/global_actions_power_dialog_flow.xml
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/secondary_card_group"

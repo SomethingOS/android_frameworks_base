@@ -42,7 +42,12 @@ import com.android.systemui.qs.footer.data.repository.UserSwitcherRepository
 import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig
 import com.android.systemui.security.data.repository.SecurityRepository
 import com.android.systemui.statusbar.policy.DeviceProvisionedController
+<<<<<<< HEAD
 import com.android.systemui.user.domain.interactor.UserInteractor
+=======
+import com.android.systemui.user.data.repository.UserSwitcherRepository
+import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
+>>>>>>> fa3d403840df (Power menu styles: Initial checkin for U [1/3])
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -153,11 +158,15 @@ constructor(
         expandable: Expandable,
     ) {
         uiEventLogger.log(GlobalActionsDialogLite.GlobalActionsEvent.GA_OPEN_QS)
-        globalActionsDialogLite.showOrHideDialog(
-            /* keyguardShowing= */ false,
-            /* isDeviceProvisioned= */ true,
-            expandable,
-        )
+        if (Settings.Secure.getInt(globalActionsDialogLite.context.getContentResolver(),
+                Settings.Secure.POWER_MENU_TYPE, 0) == 0)
+            globalActionsDialogLite.showOrHideDialog(
+                /* keyguardShowing= */ false,
+                /* isDeviceProvisioned= */ true,
+                expandable,
+            )
+        else
+            globalActionsDialogLite.context.sendBroadcast(Intent("android.intent.action.POWER_MENU"))
     }
 
     override fun showSettings(expandable: Expandable) {
