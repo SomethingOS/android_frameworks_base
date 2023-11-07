@@ -2429,8 +2429,8 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                         : mDialogRowsViewContainer.getTop() - mDialogCornerRadius);
 
         // Set gravity to top and opposite side where additional rows will be added.
-        background.setLayerGravity(0,
-                isWindowGravityLeft() ? Gravity.TOP | Gravity.LEFT : Gravity.TOP | Gravity.RIGHT);
+        background.setLayerGravity(
+                0, isWindowGravityLeft() ? Gravity.TOP | Gravity.LEFT : Gravity.TOP | Gravity.RIGHT);
 
         // In landscape, the ringer drawer animates out to the left (instead of down). Since the
         // drawer comes from the right (beyond the bounds of the dialog), we should clip it so it
