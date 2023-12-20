@@ -286,6 +286,7 @@ import com.android.server.usage.AppStandbyInternal;
 import com.android.server.wallpaper.WallpaperManagerInternal;
 
 import com.android.internal.util.custom.cutout.CutoutFullscreenController;
+import android.provider.Settings;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -805,11 +806,16 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 
     public AppStandbyInternal mAppStandbyInternal;
 
+    /** Mark if the advanced freeform window is enabled */
+    protected static boolean mEnabledAdvancedFreeformWindow = false;
+
     private final class SettingObserver extends ContentObserver {
         private final Uri mFontScaleUri = Settings.System.getUriFor(FONT_SCALE);
         private final Uri mHideErrorDialogsUri = Settings.Global.getUriFor(HIDE_ERROR_DIALOGS);
         private final Uri mFontWeightAdjustmentUri = Settings.Secure.getUriFor(
                 Settings.Secure.FONT_WEIGHT_ADJUSTMENT);
+        private final Uri mAdvancedFreeformWindowUri = Settings.Global.getUriFor(
+                Settings.Global.ADVANCED_FREEFORM_WINDOW);
 
         SettingObserver() {
             super(mH);
@@ -819,6 +825,8 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
                     mFontWeightAdjustmentUri, false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(
+                    mAdvancedFreeformWindowUri, false, this, UserHandle.USER_ALL);
         }
 
         @Override
@@ -833,6 +841,9 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                     }
                 } else if (mFontWeightAdjustmentUri.equals(uri)) {
                     updateFontWeightAdjustmentIfNeeded(userId);
+                } else if (mAdvancedFreeformWindowUri.equals(uri)) {
+                    mEnabledAdvancedFreeformWindow = Settings.Global.getInt(mContext.getContentResolver(),
+                        Settings.Global.ADVANCED_FREEFORM_WINDOW, 0) == 1;
                 }
             }
         }
@@ -946,6 +957,8 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                 com.android.internal.R.dimen.config_minPercentageMultiWindowSupportHeight);
         final float minPercentageMultiWindowSupportWidth = mContext.getResources().getFloat(
                 com.android.internal.R.dimen.config_minPercentageMultiWindowSupportWidth);
+        mEnabledAdvancedFreeformWindow = Settings.Global.getInt(resolver,
+                        Settings.Global.ADVANCED_FREEFORM_WINDOW, 0) == 1;
 
         // Transfer any global setting for forcing RTL layout, into a System Property
         DisplayProperties.debug_force_rtl(forceRtl);

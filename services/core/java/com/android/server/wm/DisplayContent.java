@@ -794,6 +794,13 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
 
     private final DisplayRotationReversionController mRotationReversionController;
 
+    /** Member variable for each Display that recording the if last touched window in freeform */
+    private boolean mIsLastTouchedWindowInFreeform = true;
+
+    protected void setTouchingActivityInFreeform(boolean val) {
+        mIsLastTouchedWindowInFreeform = val;
+    }
+
     private final Consumer<WindowState> mUpdateWindowsForAnimator = w -> {
         WindowStateAnimator winAnimator = w.mWinAnimator;
         final ActivityRecord activity = w.mActivityRecord;
@@ -878,6 +885,19 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
                 ProtoLog.v(WM_DEBUG_FOCUS_LIGHT,
                         "findFocusedWindow: Reached focused app=%s", focusedApp);
                 mTmpWindow = null;
+
+                if(ActivityTaskManagerService.mEnabledAdvancedFreeformWindow) {
+                    // If we are going null focus but the focusedApp is a freeform window
+                    // and mIsLastTouchedWindowInFreeform is false, it means we have make it
+                    // mis-skipped by interrupt, so assign this freeform window as the focused.
+                    if(focusedApp.inFreeformWindowingMode() && !mIsLastTouchedWindowInFreeform) {
+                        mTmpWindow = w;
+                    }
+                    // Also reset this flag to true when not assigning focus to any target,
+                    // following the defined window priority to prevent focus jam when some
+                    // non-user interaction breaking in
+                    mIsLastTouchedWindowInFreeform = true;
+                }
                 return true;
             }
 
@@ -889,6 +909,25 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
                         && activity.getTaskFragment() != focusedApp.getTaskFragment()) {
                     return false;
                 }
+            }
+        }
+
+        if(ActivityTaskManagerService.mEnabledAdvancedFreeformWindow) {
+            // Here just judge:
+            //  [1] inFreeformWindowingMode - if current window is a freeform window
+            //  [2] mIsLastTouchedWindowInFreeform - marked from touched process that
+            // it's a freefrom window
+            //
+            // When first goes true and second false, 
+            // it is the situation that focus target is not freeform window but it turns
+            // out selecting current freeform window as focus target. As we have marked
+            // freeform window priority higher than the normal but still lower than others
+            // [always-on-top, pinned(pip), dream(assistant on dream)],
+            // this situation will only happen for standard app as all higher priority window will
+            // be iterated before freeform window
+            if(w.inFreeformWindowingMode()
+                && !mIsLastTouchedWindowInFreeform) {
+                return false;
             }
         }
 
