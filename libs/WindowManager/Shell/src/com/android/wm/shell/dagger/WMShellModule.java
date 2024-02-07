@@ -209,12 +209,13 @@ public abstract class WMShellModule {
                     desktopTasksController);
         }
         return new CaptionWindowDecorViewModel(
-                context,
-                mainHandler,
-                mainChoreographer,
-                taskOrganizer,
-                displayController,
-                syncQueue);
+                    context,
+                    mainHandler,
+                    mainChoreographer,
+                    taskOrganizer,
+                    displayController,
+                    syncQueue,
+                    transitions);
     }
 
     //
