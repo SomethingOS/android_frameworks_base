@@ -40,6 +40,8 @@ import static com.android.systemui.flags.Flags.ONE_WAY_HAPTICS_API_MIGRATION;
 import static com.android.systemui.volume.Events.DISMISS_REASON_POSTURE_CHANGED;
 import static com.android.systemui.volume.Events.DISMISS_REASON_SETTINGS_CLICKED;
 
+import static com.android.systemui.people.PeopleSpaceUtils.convertDrawableToBitmap;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ArgbEvaluator;
@@ -60,6 +62,8 @@ import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.database.ContentObserver;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.PixelFormat;
@@ -69,6 +73,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RotateDrawable;
+import android.media.AppVolume;
 import android.media.AudioManager;
 import android.media.AudioSystem;
 import android.media.session.MediaController;
@@ -126,6 +131,8 @@ import com.android.internal.graphics.drawable.BackgroundBlurDrawable;
 import com.android.internal.jank.InteractionJankMonitor;
 import com.android.internal.view.RotationPolicy;
 import com.android.settingslib.Utils;
+import com.android.settingslib.drawable.CircleFramedDrawable;
+import com.android.systemui.Dependency;
 import com.android.systemui.Dumpable;
 import com.android.systemui.Prefs;
 import com.android.systemui.R;
@@ -142,6 +149,7 @@ import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.DevicePostureController;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
+import com.android.systemui.tuner.TunerService;
 import com.android.systemui.util.AlphaTintDrawableWrapper;
 import com.android.systemui.util.RoundedCornerProgressDrawable;
 
@@ -149,6 +157,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import javax.security.auth.callback.Callback;
 
 /**
  * Visual presentation of the volume dialog.
@@ -161,6 +171,9 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         ConfigurationController.ConfigurationListener,
         ViewTreeObserver.OnComputeInternalInsetsListener {
     private static final String TAG = Util.logTag(VolumeDialogImpl.class);
+
+    private static final String VOLUME_PANEL_ON_LEFT =
+            "customsecure:" + Settings.Secure.VOLUME_PANEL_ON_LEFT;
 
     private static final long USER_ATTEMPT_GRACE_PERIOD = 1000;
     private static final int UPDATE_ANIMATION_DURATION = 80;
@@ -193,6 +206,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     private int mDialogCornerRadius;
     private int mRingerDrawerItemSize;
     private int mRingerRowsPadding;
+    private int mTargetTapSize;
     private boolean mShowVibrate;
     private int mRingerCount;
     private final boolean mShowLowMediaVolumeIcon;
@@ -262,6 +276,9 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     private CaptionsToggleImageButton mODICaptionsIcon;
     private View mSettingsView;
     private ImageButton mSettingsIcon;
+    private View mAppVolumeView;
+    private ImageButton mAppVolumeIcon;
+    private String mAppVolumeActivePackageName;
     private View mExpandRowsView;
     private ExpandableIndicator mExpandRows;
     private FrameLayout mZenIcon;
@@ -297,6 +314,10 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     private ViewStub mODICaptionsTooltipViewStub;
     private View mODICaptionsTooltipView = null;
     private boolean mHasAlertSlider;
+    private TunerService mTunerService;
+
+    // Volume panel placement left or right
+    private boolean mVolumePanelOnLeft;
 
     private final boolean mUseBackgroundBlur;
     private Consumer<Boolean> mCrossWindowBlurEnabledListener;
@@ -343,7 +364,8 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
             DevicePostureController devicePostureController,
             Looper looper,
             DumpManager dumpManager,
-            FeatureFlags featureFlags) {
+            FeatureFlags featureFlags,
+            TunerService tunerService) {
         mFeatureFlags = featureFlags;
         mContext =
                 new ContextThemeWrapper(context, R.style.volume_dialog_theme);
@@ -360,6 +382,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         mVolumePanelFactory = volumePanelFactory;
         mCsdWarningDialogFactory = csdWarningDialogFactory;
         mActivityStarter = activityStarter;
+        mTunerService = tunerService;
         mShowActiveStreamOnly = showActiveStreamOnly();
         mHasSeenODICaptionsTooltip =
                 Prefs.getBoolean(context, Prefs.Key.HAS_SEEN_ODI_CAPTIONS_TOOLTIP, false);
@@ -391,6 +414,25 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
             };
         }
 
+        if (!mShowActiveStreamOnly) {
+            ContentObserver volumePanelOnLeftObserver = new ContentObserver(null) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    final boolean volumePanelOnLeft = Settings.Secure.getInt(
+                            mContext.getContentResolver(),
+                            Settings.Secure.VOLUME_PANEL_ON_LEFT, 0) != 0;
+                    if (mVolumePanelOnLeft != volumePanelOnLeft) {
+                        mVolumePanelOnLeft = volumePanelOnLeft;
+                        mHandler.post(mControllerCallbackH::onConfigurationChanged);
+                    }
+                }
+            };
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.VOLUME_PANEL_ON_LEFT),
+                    false, volumePanelOnLeftObserver);
+            volumePanelOnLeftObserver.onChange(true);
+        }
+
         initDimens();
 
         mOrientation = mContext.getResources().getConfiguration().orientation;
@@ -412,11 +454,15 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         final boolean isHalfOpen =
                 mDevicePosture == DevicePostureController.DEVICE_POSTURE_HALF_OPENED;
         final boolean isTabletop = isPortrait && isHalfOpen;
-        WindowManager.LayoutParams lp =  mWindow.getAttributes();
+        mOriginalGravity = mContext.getResources().getInteger(R.integer.volume_dialog_gravity);
+        if (!mShowActiveStreamOnly) {
+            // Clear the pre-defined gravity for left or right, this is handled by mVolumePanelOnLeft
+            mOriginalGravity &= ~(Gravity.LEFT | Gravity.RIGHT);
+            mOriginalGravity |= mVolumePanelOnLeft ? Gravity.LEFT : Gravity.RIGHT;
+        }
         int gravity = isTabletop ? (mOriginalGravity | Gravity.TOP) : mOriginalGravity;
         mWindowGravity = Gravity.getAbsoluteGravity(gravity,
                 mContext.getResources().getConfiguration().getLayoutDirection());
-        lp.gravity = mWindowGravity;
     }
 
     @VisibleForTesting int getWindowGravity() {
@@ -446,6 +492,10 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         if (mDevicePostureController != null) {
             mDevicePostureController.addCallback(mDevicePostureControllerCallback);
         }
+
+        mHandler.post(() -> {
+            mControllerCallbackH.onConfigurationChanged();
+        });
     }
 
     @Override
@@ -569,6 +619,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         }
         mDialog = new CustomDialog(mContext);
         initDimens();
+        adjustPositionOnScreen();
 
         mConfigurableTexts = new ConfigurableTexts(mContext);
         mHovering = false;
@@ -591,10 +642,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         lp.format = PixelFormat.TRANSLUCENT;
         lp.setTitle(VolumeDialogImpl.class.getSimpleName());
         lp.windowAnimations = -1;
-
-        mOriginalGravity = mContext.getResources().getInteger(R.integer.volume_dialog_gravity);
-        mWindowGravity = Gravity.getAbsoluteGravity(mOriginalGravity,
-                mContext.getResources().getConfiguration().getLayoutDirection());
         lp.gravity = mWindowGravity;
 
         mWindow.setAttributes(lp);
@@ -603,7 +650,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         mDialogView = mDialog.findViewById(R.id.volume_dialog);
         mDialogView.setAlpha(0);
         mDialogView.setLayoutDirection(
-                (mOriginalGravity == 19) ? LAYOUT_DIRECTION_LTR : LAYOUT_DIRECTION_RTL);
+                mVolumePanelOnLeft ? LAYOUT_DIRECTION_LTR : LAYOUT_DIRECTION_RTL);
         mDialog.setCanceledOnTouchOutside(true);
         mDialog.setOnShowListener(dialog -> {
             mDialogView.getViewTreeObserver().addOnComputeInternalInsetsListener(this);
@@ -752,6 +799,8 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         mSettingsView = mDialog.findViewById(R.id.settings_container);
         mSettingsIcon = mDialog.findViewById(R.id.settings);
 
+        mAppVolumeView = mDialog.findViewById(R.id.app_volume_container);
+        mAppVolumeIcon = mDialog.findViewById(R.id.app_volume);
         mRoundedBorderBottom = mDialog.findViewById(R.id.rounded_border_bottom);
 
         mExpandRowsView = mDialog.findViewById(R.id.expandable_indicator_container);
@@ -810,6 +859,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         updateRowsH(getActiveRow());
         initRingerH();
         initSettingsH(lockTaskModeState);
+        initAppVolumeH();
         initODICaptionsH();
         mAccessibility.init();
     }
@@ -827,11 +877,28 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                 R.dimen.volume_ringer_drawer_item_size);
         mRingerRowsPadding = mContext.getResources().getDimensionPixelSize(
                 R.dimen.volume_dialog_ringer_rows_padding);
+	mTargetTapSize = mContext.getResources().getDimensionPixelSize(
+                R.dimen.volume_dialog_tap_target_size);
         mShowVibrate = mController.hasVibrator();
 
         // Normal, mute, and possibly vibrate.
         mRingerCount = mShowVibrate ? 3 : 2;
     }
+
+    private final TunerService.Tunable mTunable = new TunerService.Tunable() {
+        @Override
+        public void onTuningChanged(String key, String newValue) {
+            if (VOLUME_PANEL_ON_LEFT.equals(key)) {
+                final boolean volumePanelOnLeft = TunerService.parseIntegerSwitch(newValue, false);
+                if (mVolumePanelOnLeft != volumePanelOnLeft) {
+                    mVolumePanelOnLeft = volumePanelOnLeft;
+                    mHandler.post(() -> {
+                        mControllerCallbackH.onConfigurationChanged();
+                    });
+                }
+            }
+        }
+    };
 
     protected ViewGroup getDialogView() {
         return mDialogView;
@@ -1278,7 +1345,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         mIsRingerDrawerOpen = false;
     }
 
-
     /**
      * @param open false to set the description when drawer is closed
      */
@@ -1366,9 +1432,11 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     }
 
     private boolean isMediaControllerAvailable() {
+        boolean showMediaController = Settings.System.getInt(mContext.getContentResolver(), Settings.System.VOLUME_MEDIA_OUTPUT_TOGGLE, 0) != 0;
         final MediaController mediaController = getActiveLocalMediaController();
-        return mediaController != null && !TextUtils.isEmpty(mediaController.getPackageName());
+        return mediaController != null && !TextUtils.isEmpty(mediaController.getPackageName())  && showMediaController;
     }
+
 
     private void initSettingsH(int lockTaskModeState) {
         final boolean showSettings = mDeviceProvisionedController.isCurrentUserSetup()
@@ -1402,6 +1470,79 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                 updateRowsH(mDefaultRow, true);
                 mExpandRows.setExpanded(mExpanded);
             });
+        }
+    }
+
+    private boolean shouldShowAppVolume() {
+        ContentResolver cr = mContext.getContentResolver();
+        int showAppVolume = Settings.System.getInt(cr, Settings.System.SHOW_APP_VOLUME, 0);
+        boolean ret = showAppVolume == 1;
+        mAppVolumeActivePackageName = null;
+        if (ret) {
+            ret = false;
+            AudioManager audioManager = mController.getAudioManager();
+            for (AppVolume av : audioManager.listAppVolumes()) {
+                if (av.isActive()) {
+                    ret = true;
+                    mAppVolumeActivePackageName = av.getPackageName();
+                    break;
+                }
+            }
+        }
+        return ret;
+    }
+
+    private Drawable getApplicationIcon(String packageName) {
+        PackageManager pm = mContext.getPackageManager();
+        Drawable icon = null;
+        try {
+            icon = pm.getApplicationIcon(packageName);
+        } catch (Exception e) {
+            // nothing to do
+        }
+        Bitmap bitmapIcon = convertDrawableToBitmap(icon);
+
+        Drawable drawableAppIcon = new CircleFramedDrawable(bitmapIcon,
+                (int) mContext.getResources().getDimension(R.dimen.volume_app_icon_max_size));
+
+        return drawableAppIcon;
+    }
+
+    public void initAppVolumeH() {
+        if (mAppVolumeView != null) {
+            mAppVolumeView.setVisibility(shouldShowAppVolume() ? VISIBLE : GONE);
+        }
+        if (mAppVolumeIcon != null) {
+            mAppVolumeIcon.setOnClickListener(v -> {
+                Events.writeEvent(Events.EVENT_SETTINGS_CLICK);
+                Intent intent = new Intent(Settings.Panel.ACTION_APP_VOLUME);
+                dismissH(DISMISS_REASON_SETTINGS_CLICKED);
+                Dependency.get(MediaOutputDialogFactory.class).dismiss();
+                Dependency.get(ActivityStarter.class).startActivity(intent,
+                        true /* dismissShade */);
+            });
+            Drawable icon = mAppVolumeActivePackageName != null ?
+                    getApplicationIcon(mAppVolumeActivePackageName) : null;
+            if (icon != null) {
+                mAppVolumeIcon.setImageTintList(null);
+                mAppVolumeIcon.setImageDrawable(icon);
+                mAppVolumeIcon.getLayoutParams().height = mTargetTapSize;
+                mAppVolumeIcon.getLayoutParams().width = mTargetTapSize;
+                mAppVolumeIcon.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                mAppVolumeIcon.setPadding(
+                        mAppVolumeView.getPaddingLeft(),
+                        mAppVolumeView.getPaddingTop(),
+                        mAppVolumeView.getPaddingRight(),
+                        mRingerRowsPadding);
+            	mAppVolumeIcon.setOutlineProvider(new ViewOutlineProvider() {
+                    @Override
+                    public void getOutline(View view, Outline outline) {
+                    	outline.setRoundRect(
+                            	0, 0, view.getWidth(), view.getHeight(), mDialogCornerRadius);
+                    }
+            	});
+            	mAppVolumeIcon.setClipToOutline(true);
+            }
         }
     }
 
@@ -1688,6 +1829,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         }
 
         initSettingsH(lockTaskModeState);
+        initAppVolumeH();
         mShowing = true;
         mIsAnimatingDismiss = false;
         mDialog.show();
@@ -1801,6 +1943,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                     mIsAnimatingDismiss = false;
 
                     hideRingerDrawer();
+                    mController.notifyVisible(false);
                 }, 50));
         if (!shouldSlideInVolumeTray()) {
             animator.translationX(
@@ -2255,7 +2398,8 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
 
         // update slider max
         final int max = ss.levelMax * 100;
-        if (max != row.slider.getMax()) {
+        final boolean maxChanged = max != row.slider.getMax();
+        if (maxChanged) {
             row.slider.setMax(max);
         }
         // update slider min
@@ -2353,7 +2497,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         final int vlevel = row.ss.muted && (!isRingStream && !zenMuted) ? 0
                 : row.ss.level;
         Trace.beginSection("VolumeDialogImpl#updateVolumeRowSliderH");
-        updateVolumeRowSliderH(row, enableSlider, vlevel);
+        updateVolumeRowSliderH(row, enableSlider, vlevel, maxChanged);
         Trace.endSection();
         if (row.number != null) row.number.setText(Integer.toString(vlevel));
     }
@@ -2375,14 +2519,14 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                 : Utils.getColorAttr(mContext, com.android.internal.R.attr.colorAccentSecondary);
         final int alpha = useActiveColoring
                 ? Color.alpha(colorTint.getDefaultColor())
-                : getAlphaAttr(android.R.attr.secondaryContentAlpha);
+                : getAlphaAttr(android.R.attr.disabledAlpha);
 
         final ColorStateList bgTint = useActiveColoring
                 ? Utils.getColorAttr(mContext, android.R.attr.colorBackgroundFloating)
-                : Utils.getColorAttr(mContext, com.android.internal.R.attr.textColorOnAccent);
+                : Utils.getColorAttr(mContext, com.android.internal.R.attr.colorAccentCustom);
 
         final ColorStateList inverseTextTint = Utils.getColorAttr(
-                mContext, com.android.internal.R.attr.textColorOnAccent);
+                mContext, com.android.internal.R.attr.colorAccentCustom);
 
         row.sliderProgressSolid.setTintList(colorTint);
         if (row.sliderProgressIcon != null) {
@@ -2400,7 +2544,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         }
     }
 
-    private void updateVolumeRowSliderH(VolumeRow row, boolean enable, int vlevel) {
+    private void updateVolumeRowSliderH(VolumeRow row, boolean enable, int vlevel, boolean maxChanged) {
         row.slider.setEnabled(enable);
         updateVolumeRowTintH(row, row.stream == mActiveStream);
         if (row.tracking) {
@@ -2424,7 +2568,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
             }
         }
         final int newProgress = vlevel * 100;
-        if (progress != newProgress) {
+        if (progress != newProgress || maxChanged) {
             if (mShowing && rowVisible) {
                 // animate!
                 if (row.anim != null && row.anim.isRunning()
@@ -2820,7 +2964,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         protected void onStart() {
             super.setCanceledOnTouchOutside(true);
             super.onStart();
-            adjustPositionOnScreen();
         }
 
         @Override
