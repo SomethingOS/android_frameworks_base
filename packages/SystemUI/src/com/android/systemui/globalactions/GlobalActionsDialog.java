@@ -52,16 +52,15 @@ import android.util.Log;
 import android.view.IWindowManager;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.android.app.animation.Interpolators;
 import com.android.internal.R;
+import com.android.systemui.animation.Expandable;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.UiEventLogger;
@@ -70,7 +69,6 @@ import com.android.internal.view.RotationPolicy;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.animation.DialogLaunchAnimator;
-import com.android.systemui.animation.Interpolators;
 import com.android.systemui.broadcast.BroadcastDispatcher;
 import com.android.systemui.colorextraction.SysuiColorExtractor;
 import com.android.systemui.controls.dagger.ControlsComponent;
@@ -86,9 +84,12 @@ import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.GlobalActions.GlobalActionsManager;
 import com.android.systemui.plugins.GlobalActionsPanelPlugin;
 import com.android.systemui.settings.UserContextProvider;
+import com.android.systemui.settings.UserTracker;
+import com.android.systemui.shade.ShadeController;
 import com.android.systemui.statusbar.NotificationShadeWindowController;
 import com.android.systemui.statusbar.VibratorHelper;
 import com.android.systemui.statusbar.phone.CentralSurfaces;
+import com.android.systemui.statusbar.phone.LightBarController;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.util.RingerModeTracker;
@@ -184,6 +185,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
             @NonNull VibratorHelper vibrator,
             @Main Resources resources,
             ConfigurationController configurationController,
+            UserTracker userTracker,
             ActivityStarter activityStarter,
             KeyguardStateController keyguardStateController,
             UserManager userManager,
@@ -195,17 +197,18 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
             IStatusBarService statusBarService,
             NotificationShadeWindowController notificationShadeWindowController,
             IWindowManager iWindowManager,
+            LightBarController lightBarController,
             @Background Executor backgroundExecutor,
             UiEventLogger uiEventLogger,
             RingerModeTracker ringerModeTracker,
             @Main Handler handler,
             UserContextProvider userContextProvider,
             PackageManager packageManager,
+            ShadeController shadeController,
             Optional<CentralSurfaces> statusBarOptional,
             KeyguardUpdateMonitor keyguardUpdateMonitor,
             DialogLaunchAnimator dialogLaunchAnimator,
             ControlsComponent controlsComponent) {
-
         super(context,
                 windowManagerFuncs,
                 audioManager,
@@ -218,6 +221,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
                 vibrator,
                 resources,
                 configurationController,
+                userTracker,
                 keyguardStateController,
                 userManager,
                 trustManager,
@@ -226,6 +230,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
                 metricsLogger,
                 colorExtractor,
                 statusBarService,
+                lightBarController,
                 notificationShadeWindowController,
                 iWindowManager,
                 backgroundExecutor,
@@ -233,6 +238,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
                 ringerModeTracker,
                 handler,
                 packageManager,
+                shadeController,
                 statusBarOptional,
                 keyguardUpdateMonitor,
                 dialogLaunchAnimator,
@@ -254,7 +260,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
         if (mControlsComponent.getControlsListingController().isPresent()) {
             mControlsComponent.getControlsListingController().get()
                     .addCallback(list -> {
-                        mControlsServiceInfos = list;
+                        mControlsServiceInfos = new ArrayList(list);
                         // This callback may occur after the dialog has been shown. If so, add
                         // controls into the already visible space or show the lock msg if needed.
                         if (mDialog != null) {
@@ -355,13 +361,13 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
      */
     @Override
     public void showOrHideDialog(boolean keyguardShowing, boolean isDeviceProvisioned,
-            @Nullable View v, GlobalActionsPanelPlugin walletPlugin) {
+            @Nullable Expandable v, GlobalActionsPanelPlugin walletPlugin) {
         mWalletPlugin = walletPlugin;
         super.showOrHideDialog(keyguardShowing, isDeviceProvisioned, null);
     }
 
     @Override
-    protected void handleShow(View v) {
+    protected void handleShow(@Nullable Expandable expandable) {
         seedFavorites();
         super.handleShow(null);
     }
@@ -392,10 +398,10 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
         }
         ActionsDialog dialog = new ActionsDialog(getContext(), mAdapter, mOverflowAdapter,
         this::getWalletViewController, mSysuiColorExtractor,
-                mCentralSurfacesService, mNotificationShadeWindowController,
-                controlsAvailable(), uiController, this::onRefresh, mKeyguardShowing,
-                mPowerAdapter, mUiEventLogger,
-                mCentralSurfacesOptional, mKeyguardUpdateMonitor,
+                mCentralSurfacesService, mLightBarController, mKeyguardStateController,
+                mNotificationShadeWindowController, controlsAvailable(), uiController,
+                this::onRefresh, mKeyguardShowing, mPowerAdapter, mUiEventLogger,
+                mCentralSurfacesOptional, mShadeController, mKeyguardUpdateMonitor,
                 mLockPatternUtils);
 
         dialog.setCanceledOnTouchOutside(false); // Handled by the custom class.
@@ -462,16 +468,18 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
         ActionsDialog(Context context, MyAdapter adapter, MyOverflowAdapter overflowAdapter,
                 Provider<GlobalActionsPanelPlugin.PanelViewController> walletFactory,
                 SysuiColorExtractor sysuiColorExtractor, IStatusBarService statusBarService,
+                LightBarController lightBarController,
                 NotificationShadeWindowController notificationShadeWindowController,
-                boolean controlsAvailable, @Nullable ControlsUiController controlsUiController,
-                Runnable onRotateCallback, boolean keyguardShowing,
-                MyPowerOptionsAdapter powerAdapter, UiEventLogger uiEventLogger,
-                Optional<CentralSurfaces> statusBarOptional, KeyguardUpdateMonitor keyguardUpdateMonitor,
-                LockPatternUtils lockPatternUtils) {
+                KeyguardStateController keyguardStateController, boolean controlsAvailable,
+                @Nullable ControlsUiController controlsUiController, Runnable onRotateCallback,
+                boolean keyguardShowing, MyPowerOptionsAdapter powerAdapter,
+                UiEventLogger uiEventLogger, Optional<CentralSurfaces> statusBarOptional,
+                ShadeController shadeController, KeyguardUpdateMonitor keyguardUpdateMonitor, LockPatternUtils lockPatternUtils) {
             super(context, com.android.systemui.R.style.Theme_SystemUI_Dialog_GlobalActions,
                     adapter, overflowAdapter, sysuiColorExtractor, statusBarService,
-                    notificationShadeWindowController, onRotateCallback,
-                    keyguardShowing, powerAdapter, uiEventLogger, statusBarOptional,
+                    lightBarController, notificationShadeWindowController, keyguardStateController, 
+                    onRotateCallback, keyguardShowing, powerAdapter,
+                    uiEventLogger, statusBarOptional, shadeController, 
                     keyguardUpdateMonitor, lockPatternUtils);
             mControlsAvailable = controlsAvailable;
             mControlsUiController = controlsUiController;
@@ -600,7 +608,8 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
             mControlsView = findViewById(com.android.systemui.R.id.global_actions_controls);
             mLockMessageContainer = requireViewById(
                     com.android.systemui.R.id.global_actions_lock_message_container);
-            mLockMessage = requireViewById(com.android.systemui.R.id.global_actions_lock_message);
+            mLockMessage =
+                    requireViewById(com.android.systemui.R.id.global_actions_lock_message);
             initializeWalletView();
             getWindow().setBackgroundDrawable(mBackgroundDrawable);
         }
@@ -612,15 +621,6 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
                 mControlsUiController.show(mControlsView, this::dismissForControlsActivity,
                         null /* activityContext */);
             }
-
-            ViewGroup root = (ViewGroup) mGlobalActionsLayout.getRootView();
-            root.setOnApplyWindowInsetsListener((v, windowInsets) -> {
-                root.setPadding(windowInsets.getStableInsetLeft(),
-                        windowInsets.getStableInsetTop(),
-                        windowInsets.getStableInsetRight(),
-                        windowInsets.getStableInsetBottom());
-                return WindowInsets.CONSUMED;
-            });
 
             mBackgroundDrawable.setAlpha(0);
             float xOffset = mGlobalActionsLayout.getAnimationOffsetX();
@@ -648,7 +648,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
         public void dismiss() {
             dismissWallet();
             if (mControlsUiController != null) mControlsUiController.closeDialogs(false);
-            if (mControlsUiController != null) mControlsUiController.hide();
+            if (mControlsUiController != null) mControlsUiController.hide(mControlsView);
             mContainer.setTranslationX(0);
             ObjectAnimator alphaAnimator =
                     ObjectAnimator.ofFloat(mContainer, "alpha", 1f, 0f);
@@ -685,7 +685,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
         private void dismissForControlsActivity() {
             dismissWallet();
             if (mControlsUiController != null) mControlsUiController.closeDialogs(false);
-            if (mControlsUiController != null) mControlsUiController.hide();
+            if (mControlsUiController != null) mControlsUiController.hide(mControlsView);
             ViewGroup root = (ViewGroup) mGlobalActionsLayout.getParent();
             ControlsAnimations.exitAnimation(root, this::completeDismiss).start();
         }
@@ -711,7 +711,7 @@ public class GlobalActionsDialog extends GlobalActionsDialogLite
             // ensure dropdown menus are dismissed before re-initializing the dialog
             dismissWallet();
             if (mControlsUiController != null) {
-                mControlsUiController.hide();
+                mControlsUiController.hide(mControlsView);
             }
 
             super.refreshDialog();

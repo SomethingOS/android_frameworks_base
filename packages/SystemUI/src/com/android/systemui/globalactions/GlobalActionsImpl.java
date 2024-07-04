@@ -26,6 +26,7 @@ import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 import com.android.systemui.statusbar.policy.ExtensionController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import android.provider.Settings;
 
 import javax.inject.Inject;
 

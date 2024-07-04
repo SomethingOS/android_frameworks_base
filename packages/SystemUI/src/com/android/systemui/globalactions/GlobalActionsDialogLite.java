@@ -252,7 +252,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
     private int mSmallestScreenWidthDp;
     private int mOrientation;
     protected final Optional<CentralSurfaces> mCentralSurfacesOptional;
-    private final ShadeController mShadeController;
+    protected final ShadeController mShadeController;
     protected final KeyguardUpdateMonitor mKeyguardUpdateMonitor;
     private final DialogLaunchAnimator mDialogLaunchAnimator;
 
@@ -458,8 +458,8 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
     }
 
     public void showOrHideDialog(boolean keyguardShowing, boolean isDeviceProvisioned,
-            @Nullable View v, GlobalActionsPanelPlugin walletPlugin) {
-        showOrHideDialog(keyguardShowing, isDeviceProvisioned, v);
+            @Nullable Expandable expandable, GlobalActionsPanelPlugin walletPlugin) {
+        showOrHideDialog(keyguardShowing, isDeviceProvisioned, expandable);
     }
 
     /**
