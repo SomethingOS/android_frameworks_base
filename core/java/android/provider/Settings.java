@@ -12106,6 +12106,14 @@ public final class Settings {
         @Readable
         public static final String WINDOW_IGNORE_SECURE = "window_ignore_secure";
 
+        
+        /**
+         * Control whether Settings should use the new layout
+         * @hide
+         */
+        @Readable
+        public static final String NEW_SETTINGS_LAYOUT = "new_settings_layout";
+
         /**
          * Whether lockscreen weather is enabled.
          *
