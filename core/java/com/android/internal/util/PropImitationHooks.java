@@ -79,7 +79,6 @@ public class PropImitationHooks {
         "PIXEL_2016_PRELOAD"
     );
 
-    private static volatile String[] sCertifiedProps;
     private static volatile String sStockFp, sNetflixModel;
 
     private static volatile String sProcessName;
@@ -98,6 +97,17 @@ public class PropImitationHooks {
     private static final Map<String, String> propsToChangeMI13P;
     private static final Map<String, String> propsToChangeF5;
     private static final Map<String, String> propsToChangeBS4;
+
+    private static final String[] certifiedProps = {
+        "MANUFACTURER",
+        "BRAND",
+        "DEVICE",
+        "MODEL",
+        "PRODUCT",
+        "FINGERPRINT",
+        "SECURITY_PATCH",
+        "FIRST_API_LEVEL"
+    };
 
     // Packages to Spoof as ROG Phone 6
     private static final String[] packagesToChangeROG6 = {
@@ -246,7 +256,6 @@ public class PropImitationHooks {
             return;
         }
 
-        sCertifiedProps = res.getStringArray(R.array.config_certifiedBuildProperties);
         sStockFp = res.getString(R.string.config_stockFingerprint);
         sNetflixModel = res.getString(R.string.config_netflixSpoofModel);
 
@@ -367,10 +376,6 @@ public class PropImitationHooks {
     }
 
     private static void setCertifiedPropsForGms() {
-        if (sCertifiedProps.length == 0) {
-            dlog("Certified props are not set");
-            return;
-        }
         final boolean was = isGmsAddAccountActivityOnTop();
         final TaskStackListener taskStackListener = new TaskStackListener() {
             @Override
@@ -397,11 +402,9 @@ public class PropImitationHooks {
     }
 
     private static void setCertifiedProps() {
-        String allKeys = SystemProperties.get("persist.sys.somethingos.gms.list");
-        if (allKeys != null && !allKeys.isEmpty()) {
-            String[] keys = allKeys.split("\\+");
-            for (String key : keys) {
-                String value = SystemProperties.get("persist.sys.somethingos.gms." + key);
+        for (String key : certifiedProps) {
+            String value = SystemProperties.get("persist.sys.somethingos.gms." + key);
+            if (value != null && !value.isEmpty()) {
                 if (key.equals("SECURITY_PATCH")) {
                     setSystemProperty(PROP_SECURITY_PATCH, value);
                 } else if (key.equals("FIRST_API_LEVEL")) {
@@ -410,19 +413,6 @@ public class PropImitationHooks {
                     setPropValue(key, value);
                 }
             }
-        } else {
-            for (String entry : sCertifiedProps) {
-                // Each entry must be of the format FIELD:value
-                final String[] fieldAndProp = entry.split(":", 2);
-                if (fieldAndProp.length != 2) {
-                    Log.e(TAG, "Invalid entry in certified props: " + entry);
-                    continue;
-                }
-                setPropValue(fieldAndProp[0], fieldAndProp[1]);
-            }
-            setSystemProperty(PROP_SECURITY_PATCH, Build.VERSION.SECURITY_PATCH);
-            setSystemProperty(PROP_FIRST_API_LEVEL,
-                    Integer.toString(Build.VERSION.DEVICE_INITIAL_SDK_INT));
         }
     }
 
