@@ -77,15 +77,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class BackAnimationController implements RemoteCallable<BackAnimationController> {
     private static final String TAG = "ShellBackPreview";
-    private static final int SETTING_VALUE_OFF = 0;
-    private static final int SETTING_VALUE_ON = 1;
-    public static final boolean IS_ENABLED =
-            SystemProperties.getInt("persist.wm.debug.predictive_back",
-                    SETTING_VALUE_ON) == SETTING_VALUE_ON;
+    private static final int SETTING_VALUE_OFF = 1;
+    private static final int SETTING_VALUE_ON = 0;
+    public static final boolean IS_ENABLED = true;
      /** Flag for U animation features */
-    public static boolean IS_U_ANIMATION_ENABLED =
-            SystemProperties.getInt("persist.wm.debug.predictive_back_anim",
-                    SETTING_VALUE_ON) == SETTING_VALUE_ON;
+    public static boolean IS_U_ANIMATION_ENABLED = true;
 
     public static final float FLING_MAX_LENGTH_SECONDS = 0.1f;     // 100ms
     public static final float FLING_SPEED_UP_FACTOR = 0.6f;
@@ -250,7 +246,7 @@ public class BackAnimationController implements RemoteCallable<BackAnimationCont
     @ShellBackgroundThread
     private void updateEnableAnimationFromSetting() {
         int settingValue = Global.getInt(mContext.getContentResolver(),
-                Global.ENABLE_BACK_ANIMATION, SETTING_VALUE_OFF);
+                Global.ENABLE_BACK_ANIMATION, SETTING_VALUE_ON);
         boolean isEnabled = settingValue == SETTING_VALUE_ON;
         mEnableAnimations.set(isEnabled);
         ProtoLog.d(WM_SHELL_BACK_PREVIEW, "Back animation enabled=%s", isEnabled);
