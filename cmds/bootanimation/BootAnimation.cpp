@@ -735,6 +735,7 @@ std::string getBootAnimationPath() {
     static const std::unordered_map<std::string, std::string> bootAnimationPaths {
         {"dot", "/product/media/dots.zip"},
         {"somethingos", "/product/media/bootanimation.zip"},
+        {"fox", "/product/media/fox.zip"},
         {"googlish", "/product/media/googlish.zip"},
         {"pixel", "/product/media/pixel.zip"}
     };
