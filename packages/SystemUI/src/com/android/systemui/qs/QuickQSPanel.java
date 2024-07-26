@@ -44,18 +44,26 @@ public class QuickQSPanel extends QSPanel implements TunerService.Tunable {
     public static final int TUNER_MAX_TILES_FALLBACK = 6;
 
     private QSLogger mQsLogger;
+    
+    // Tile Columns on normal conditions
+    public int mMaxColumnsPortrait = 5;
+    public int mMaxColumnsLandscape = 6;
+
     private boolean mDisabledByPolicy;
     private int mMaxTiles;
 
     public QuickQSPanel(Context context, AttributeSet attrs) {
         super(context, attrs);
         mMaxTiles = getResources().getInteger(R.integer.quick_qs_panel_max_tiles);
+        mMaxColumnsPortrait = getResources().getInteger(R.integer.quick_qs_panel_num_columns);
+        mMaxColumnsLandscape = getResources().getInteger(R.integer.quick_qs_panel_num_columns_landscape);
     }
 
     @Override
     protected void setHorizontalContentContainerClipping() {
         mHorizontalContentContainer.setClipToPadding(false);
         mHorizontalContentContainer.setClipChildren(false);
+        updateColumns();
     }
 
 
@@ -157,6 +165,16 @@ public class QuickQSPanel extends QSPanel implements TunerService.Tunable {
         super.drawTile(r, state);
     }
 
+    public void updateColumns() {
+        boolean isLandscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+
+        if (isLandscape) {
+            mTileLayout.setMaxColumns(mMaxColumnsLandscape);
+        } else {
+            mTileLayout.setMaxColumns(mMaxColumnsPortrait);
+        }
+    }
+
     public void setMaxTiles(int maxTiles) {
         mMaxTiles = maxTiles;
     }
@@ -252,7 +270,7 @@ public class QuickQSPanel extends QSPanel implements TunerService.Tunable {
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,
                     LayoutParams.WRAP_CONTENT);
             setLayoutParams(lp);
-            setMaxColumns(4);
+            setMaxColumns(6);
         }
 
         @Override

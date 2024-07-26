@@ -449,7 +449,7 @@
     <dimen name="car_qs_header_system_icons_area_height">54dp</dimen>
 
     <!-- The height of the quick settings footer that holds the pagination dots and edit button -->
-    <dimen name="qs_footer_height">48dp</dimen>
+    <dimen name="qs_footer_height">60dp</dimen>
 
     <!-- 40dp (circles) + 8dp (circle padding) + 8dp (top) + 4dp (bottom) -->
     <dimen name="footer_actions_height">60dp</dimen>
@@ -492,7 +492,7 @@
     <dimen name="match_parent">-1px</dimen>
 
     <!-- Height of status bar in split shade mode - visible only on large screens -->
-    <dimen name="large_screen_shade_header_height">48dp</dimen>
+    <dimen name="large_screen_shade_header_height">135dp</dimen>
     <dimen name="large_screen_shade_header_min_height">@dimen/qs_header_row_min_height</dimen>
     <dimen name="large_screen_shade_header_left_padding">@dimen/qs_horizontal_margin</dimen>
     <dimen name="shade_header_system_icons_height">@dimen/large_screen_shade_header_min_height</dimen>
@@ -605,14 +605,15 @@
     <dimen name="pull_span_min">25dp</dimen>
 
     <dimen name="qs_corner_radius">28dp</dimen>
-    <dimen name="qs_tile_height">80dp</dimen>
-    <dimen name="qs_tile_margin_horizontal">8dp</dimen>
+    <dimen name="qs_tile_height">96dp</dimen>
+    <dimen name="qs_tile_margin_horizontal">22dp</dimen>
     <dimen name="qs_tile_margin_vertical">@dimen/qs_tile_margin_horizontal</dimen>
     <dimen name="qs_tile_margin_top_bottom">4dp</dimen>
     <dimen name="qs_brightness_margin_top">8dp</dimen>
     <dimen name="qs_brightness_margin_bottom">16dp</dimen>
     <dimen name="qqs_layout_margin_top">16dp</dimen>
     <dimen name="qqs_layout_padding_bottom">24dp</dimen>
+    <dimen name="qqs_layout_padding_top">0dp</dimen>
     <item name="qqs_expand_clock_scale" format="float" type="dimen">2.57</item>
 
     <!-- Most of the time it should be the same as notification_side_paddings as it's vertically
@@ -631,12 +632,12 @@
         longer full width and next page of tiles should be at the edge of the screen -->
     <dimen name="qs_tiles_page_horizontal_margin">@dimen/notification_side_paddings</dimen>
 
-    <dimen name="qs_customize_internal_side_paddings">8dp</dimen>
+    <dimen name="qs_customize_internal_side_paddings">6dp</dimen>
     <dimen name="qs_icon_size">20dp</dimen>
     <dimen name="qs_side_view_size">28dp</dimen>
-    <dimen name="qs_label_container_margin">10dp</dimen>
-    <dimen name="qs_quick_tile_size">60dp</dimen>
-    <dimen name="qs_tile_padding">8dp</dimen>
+    <dimen name="qs_label_container_margin">6dp</dimen>
+    <dimen name="qs_quick_tile_size">55dp</dimen>
+    <dimen name="qs_tile_padding">18dp</dimen>
     <dimen name="qs_tile_start_padding">16dp</dimen>
     <dimen name="qs_drawable_end_margin">4dp</dimen>
     <dimen name="qs_page_indicator_width">16dp</dimen>
@@ -645,7 +646,7 @@
          Scaled @dimen/qs_page_indicator-width by .4f.
     -->
     <dimen name="qs_page_indicator_dot_width">6.4dp</dimen>
-    <dimen name="qs_tile_text_size">14sp</dimen>
+    <dimen name="qs_tile_text_size">12sp</dimen>
     <dimen name="qs_panel_padding">16dp</dimen>
     <dimen name="qs_dual_tile_padding_horizontal">6dp</dimen>
     <dimen name="qs_panel_elevation">4dp</dimen>

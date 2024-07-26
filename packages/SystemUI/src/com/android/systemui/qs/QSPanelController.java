@@ -125,6 +125,7 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
             refreshAllTiles();
         }
         switchTileLayout(true);
+        mView.updateColumns();
         mBrightnessMirrorHandler.onQsPanelAttached();
         PagedTileLayout pagedTileLayout= ((PagedTileLayout) mView.getOrCreateTileLayout());
         pagedTileLayout.setOnTouchListener(mTileLayoutTouchListener);
@@ -147,6 +148,7 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
     @Override
     protected void onConfigurationChanged() {
         mView.updateResources();
+        mView.updateColumns();
         if (mView.isListening()) {
             refreshAllTiles();
         }
@@ -184,6 +186,9 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
                 mBrightnessController.unregisterCallbacks();
             }
         }
+        // Set the listening as soon as the QS fragment starts listening regardless of the
+        //expansion, so it will update the current brightness before the slider is visible.
+        mBrightnessController.registerCallbacks();
     }
 
     public void setBrightnessMirror(BrightnessMirrorController brightnessMirrorController) {
