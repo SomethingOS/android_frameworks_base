@@ -18514,6 +18514,18 @@ public final class Settings {
         public static final String PM_DOWNGRADE_ALLOWED = "pm_downgrade_allowed";
 
         /**
+         * Enable advanced freeform window logic
+         * @hide
+         */
+        public static final String ADVANCED_FREEFORM_WINDOW = "advanced_freeform_window";
+
+        /**
+         * Whether using veiled resize task positioner for freeform window decor
+         * @hide
+         */
+        public static final String FREEFORM_WINDOW_USE_VEILED_RESIZE = "freeform_use_veiled_resize";
+
+        /**
          * Setting indicating whether Low Power Standby is enabled, if supported.
          *
          * Values are:

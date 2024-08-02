@@ -44,7 +44,7 @@ import com.android.wm.shell.freeform.FreeformTaskTransitionStarter;
 import com.android.wm.shell.splitscreen.SplitScreenController;
 import com.android.wm.shell.transition.Transitions;
 
-import com.libremobileos.providers.LMOSettings;
+import android.provider.Settings;
 
 /**
  * View model for the window decoration with a caption and shadows. Works with
@@ -213,7 +213,7 @@ public class CaptionWindowDecorViewModel implements WindowDecorViewModel {
     private DragPositioningCallback createDragPositioningCallback(
             CaptionWindowDecoration windowDecoration) {
         boolean veiledResizeEnabled = Settings.Global.getInt(mContext.getContentResolver(),
-                        LMOSettings.Global.FREEFORM_WINDOW_USE_VEILED_RESIZE, 0) == 1;
+                        Settings.Global.FREEFORM_WINDOW_USE_VEILED_RESIZE, 0) == 1;
         if (veiledResizeEnabled) {
             windowDecoration.createResizeVeil();
             return new VeiledResizeTaskPositioner(
