@@ -12165,6 +12165,12 @@ public final class Settings {
          * @hide
          */
         public static final String QS_STYLE_ROUND = "qs_style_round";
+
+        /**
+         * Quicksettings UI Style
+         * @hide
+         */
+        public static final String QS_STYLE_SOMETHING = "qs_style_something";
         
         /**
          * These entries are considered common between the personal and the managed profile,

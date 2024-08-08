@@ -32,6 +32,9 @@ import static com.android.systemui.theme.ThemeOverlayApplier.TIMESTAMP_FIELD;
 import static com.android.systemui.util.qs.QSStyleUtils.QS_STYLE_ROUND_OVERLAY;
 import static com.android.systemui.util.qs.QSStyleUtils.isRoundQSSetting;
 import static com.android.systemui.util.qs.QSStyleUtils.setRoundQS;
+import static com.android.systemui.util.qs.QSStyleUtils.QS_STYLE_SOME_OVERLAY;
+import static com.android.systemui.util.qs.QSStyleUtils.isSomethingQSSetting;
+import static com.android.systemui.util.qs.QSStyleUtils.setSomethingQS;
 
 import android.app.UiModeManager;
 import android.app.WallpaperColors;
@@ -548,8 +551,10 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
                 UserHandle.USER_ALL);
 
         boolean isRoundQS = isRoundQSSetting(mContext);
-        setRoundQS(isRoundQS);
+        boolean isSomethingQS = isSomethingQSSetting(mContext);
+        setRoundQS(isRoundQS || isSomethingQS);
         mThemeManager.enableOverlay(QS_STYLE_ROUND_OVERLAY, isRoundQS);
+        mThemeManager.enableOverlay(QS_STYLE_SOME_OVERLAY, isSomethingQS);
         mSecureSettings.registerContentObserverForUser(
                 Settings.Secure.getUriFor(Settings.Secure.QS_STYLE_ROUND),
                 false,
@@ -560,6 +565,21 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
                         boolean isRoundQS = isRoundQSSetting(mContext);
                         setRoundQS(isRoundQS);
                         mThemeManager.enableOverlay(QS_STYLE_ROUND_OVERLAY, isRoundQS);
+
+                        reevaluateSystemTheme(true /* forceReload */);
+                    }
+                },
+                UserHandle.USER_ALL);
+        mSecureSettings.registerContentObserverForUser(
+                Settings.Secure.getUriFor(Settings.Secure.QS_STYLE_SOMETHING),
+                false,
+                new ContentObserver(mBgHandler) {
+                    @Override
+                    public void onChange(boolean selfChange, Collection<Uri> collection, int flags,
+                            int userId) {
+                        boolean isSomethingQS = isSomethingQSSetting(mContext);
+                        setSomethingQS(isSomethingQS);
+                        mThemeManager.enableOverlay(QS_STYLE_SOME_OVERLAY, isSomethingQS);
 
                         reevaluateSystemTheme(true /* forceReload */);
                     }

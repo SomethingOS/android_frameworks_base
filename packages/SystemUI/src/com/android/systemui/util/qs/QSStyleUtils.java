@@ -22,20 +22,36 @@ import com.android.systemui.R;
 
 public class QSStyleUtils {
     public static final String QS_STYLE_ROUND = Settings.Secure.QS_STYLE_ROUND;
+    public static final String QS_STYLE_SOMETHING = Settings.Secure.QS_STYLE_SOMETHING;
     public static final String QS_STYLE_ROUND_OVERLAY = "com.android.systemui.qs_style.round";
+    public static final String QS_STYLE_SOME_OVERLAY = "com.android.systemui.qs_style.something";
 
     private static boolean mIsRoundQS;
+    private static boolean mIsSomethingQS;
 
     public static void setRoundQS(boolean enable) {
         mIsRoundQS = enable;
+    }
+
+    public static void setSomethingQS(boolean enable) {
+        mIsSomethingQS = enable;
     }
 
     public static boolean isRoundQS() {
         return mIsRoundQS;
     }
 
+    public static boolean isSomethingQS() {
+        return mIsSomethingQS;
+    }
+
     public static boolean isRoundQSSetting(Context context) {
         return Settings.Secure.getIntForUser(context.getContentResolver(),
                 QS_STYLE_ROUND, 1, UserHandle.USER_CURRENT) == 1;
+    }
+
+    public static boolean isSomethingQSSetting(Context context) {
+        return Settings.Secure.getIntForUser(context.getContentResolver(),
+                QS_STYLE_SOMETHING, 1, UserHandle.USER_CURRENT) == 1;
     }
 }
