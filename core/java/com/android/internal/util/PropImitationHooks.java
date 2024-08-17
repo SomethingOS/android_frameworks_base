@@ -2,6 +2,7 @@
  * Copyright (C) 2022-2024 Paranoid Android
  *           (C) 2023 ArrowOS
  *           (C) 2023 The LibreMobileOS Foundation
+ *           (C) 2024 SomethingOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +97,7 @@ public class PropImitationHooks {
     private static volatile boolean sIsPixelDevice, sIsGms, sIsFinsky, sIsPhotos, sShouldApplyGMS;
 
     // Pixels
-    private static final Map<String, String> propsToChangePixel8Pro;
+    private static final Map<String, String> propsToChangePixel9Pro;
     private static final Map<String, String> propsToChangePixelXL;
 
     // Games
@@ -188,7 +189,7 @@ public class PropImitationHooks {
     };
 
 
-    private static final String[] packagesToChangePixel8Pro = {
+    private static final String[] packagesToChangePixel9Pro = {
             "com.android.vending",
             "com.google.android.apps.customization.pixel",
             "com.google.android.apps.emojiwallpaper",
@@ -205,15 +206,15 @@ public class PropImitationHooks {
     };
 
     static {
-        propsToChangePixel8Pro = new HashMap<>();
-        propsToChangePixel8Pro.put("BRAND", "google");
-        propsToChangePixel8Pro.put("MANUFACTURER", "Google");
-        propsToChangePixel8Pro.put("DEVICE", "husky");
-        propsToChangePixel8Pro.put("PRODUCT", "husky");
-        propsToChangePixel8Pro.put("HARDWARE", "husky");
-        propsToChangePixel8Pro.put("MODEL", "Pixel 8 Pro");
-        propsToChangePixel8Pro.put("ID", "UQ1A.240205.004");
-        propsToChangePixel8Pro.put("FINGERPRINT", "google/husky/husky:14/UQ1A.240205.004/11269751:user/release-keys");
+        propsToChangePixel9Pro = new HashMap<>();
+        propsToChangePixel9Pro.put("BRAND", "google");
+        propsToChangePixel9Pro.put("MANUFACTURER", "Google");
+        propsToChangePixel9Pro.put("DEVICE", "caiman");
+        propsToChangePixel9Pro.put("PRODUCT", "caiman");
+        propsToChangePixel9Pro.put("HARDWARE", "caiman");
+        propsToChangePixel9Pro.put("MODEL", "Pixel 9 Pro");
+        propsToChangePixel9Pro.put("ID", "AD1A.240530.047.U1");
+        propsToChangePixel9Pro.put("FINGERPRINT", "google/caiman/caiman:14/AD1A.240530.047.U1/12150698:user/release-keys");
         propsToChangePixelXL = new HashMap<>();
         propsToChangePixelXL.put("BRAND", "google");
         propsToChangePixelXL.put("MANUFACTURER", "Google");
@@ -296,8 +297,8 @@ public class PropImitationHooks {
                 String value = prop.getValue();
                 setPropValue(key, value);
             }
-        } else if (Arrays.asList(packagesToChangePixel8Pro).contains(packageName) && SystemProperties.getBoolean(spoofGApps, false)) {
-            for (Map.Entry<String, String> prop : propsToChangePixel8Pro.entrySet()) {
+        } else if (Arrays.asList(packagesToChangePixel9Pro).contains(packageName) && SystemProperties.getBoolean(spoofGApps, false)) {
+            for (Map.Entry<String, String> prop : propsToChangePixel9Pro.entrySet()) {
                 String key = prop.getKey();
                 String value = prop.getValue();
                 setPropValue(key, value);
