@@ -197,8 +197,7 @@ public class VolumePanelDialog extends SystemUIDialog implements LifecycleOwner 
 
     @Override
     protected void start() {
-        Log.d(TAG, "onStart");
-        mController.notifyVisible(true);
+        //mController.notifyVisible(true);
         mLifecycleRegistry.setCurrentState(Lifecycle.State.STARTED);
         mLifecycleRegistry.setCurrentState(Lifecycle.State.RESUMED);
     }
