@@ -44,7 +44,6 @@
             app:expandedTitleTextAppearance="@style/xd_toolbar.Expanded"
             app:expandedTitleMarginStart="@dimen/xd_toolbar_expanded_title_margin_start"
             app:expandedTitleMarginEnd="@dimen/xd_toolbar_expanded_title_margin_end"
-            app:toolbarId="@id/action_bar"
             app:expandedTitleGravity="bottom|center_horizontal"
             style="@style/CollapsingToolbarLayoutStyle.SettingsLib">
 
