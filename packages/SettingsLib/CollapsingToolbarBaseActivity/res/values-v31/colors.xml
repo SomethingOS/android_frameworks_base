@@ -12,5 +12,5 @@
 -->
 <resources>
     <!-- xdUI Base Layout -->
-    <color name="xd_background1">@android:color/system_neutral1_50</color>
+    <color name="xd_background1">@android:color/system_surface_container_light</color>
 </resources>
