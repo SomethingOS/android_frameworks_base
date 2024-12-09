@@ -35,6 +35,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class SomeImitationHooks {
 
@@ -76,6 +77,15 @@ public class SomeImitationHooks {
         "SECURITY_PATCH",
         "FIRST_API_LEVEL"
     };
+
+    //Pixel flags
+    private static final Set<String> sGphotosFeatures = Set.of(
+        "NEXUS_PRELOAD",
+        "nexus_preload",
+        "PIXEL_EXPERIENCE",
+        "PIXEL_PRELOAD",
+        "PIXEL_2016_PRELOAD"
+    );
 
     // Fill Devices
     static {
@@ -237,6 +247,13 @@ public class SomeImitationHooks {
             return false;
         }
         return gmsUid == callingUid;
+    }
+
+    public static boolean hasSystemFeature(String name, boolean has) {
+        if (sIsGPhotos && sUnlimitedGPhotos && sGphotosFeatures.stream().anyMatch(name::contains)) {
+            return true;
+        }
+        return has;
     }
 
     private static boolean isGmsAddAccountActivityOnTop() {
